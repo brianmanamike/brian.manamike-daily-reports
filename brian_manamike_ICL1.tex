@@ -1,0 +1,302 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{fancyvrb}
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{verbatim}
+
+\title{AFRICAN INSTITUTE OF MATHEMATICS AND SCIENCES}
+\author{BRIAN AYANDA MANAMIKE}
+
+\date{}
+
+
+\usepackage{graphicx}
+
+\begin{document}
+
+\maketitle
+\section*{Question 1}
+\begin{verbatim}
+sumation(){
+read -p "If you want to compute odd press 1 and for even press 2 : " a
+
+
+#1(i)
+if (( a==1 )) ;then
+read -p "enter the number n:" n
+sum=0
+for(( i=1; i<=n; i+=2 ));
+do
+ sum=$(( sum + i + 3 ))
+done
+echo "$sum"
+
+elif (( a==2 )) ;then
+#1(ii)
+
+read -p " enter number n:" n
+sum=0
+for(( i=1; i<=n; i++ ));
+do
+ if (( i%2==0 )) ;then
+ sum=$(( sum + i + 3 ))
+
+fi
+done
+echo "$sum"
+fi
+
+}
+
+sumation
+\end{verbatim}
+\section*{Question 2}
+\begin{verbatim}
+Days_of_the week(){
+read -p "Enter the number of a day you want to check : " n
+
+
+my_arr=("Sunday"  "Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday")
+if [[ $n -gt 0 && $n -lt 6 ]] ;then
+echo "The day is a working day and the day is ${my_arr[$n]} "
+else
+echo "The day is a weekend"
+fi
+
+}
+Days_of_the_week
+\end{verbatim}
+\section*{Number 3}
+\begin{verbatim}
+get_number_of_months() {
+
+read -p "Enter the number of the month :" n
+
+my_arr=("January" "February" "March" "April" "May" "June" "July" "August" "September" "October" "November" "December")
+if [[ $n -eq 1 ]] ;then
+echo "The month is ${my_arr[$n]} and has 28 days"
+elif [[ $n -eq 3 || $n -eq 5 || $n -eq 8 || $n -eq 10 ]] ;then
+echo "The month is ${my_arr[$n]} and has 30 days"
+else
+echo "The month is ${my_arr[$n]} and has 31 days"
+fi
+}
+get_number_of_months
+\end{verbatim}
+\section*{Number 4}
+\begin{verbatim}
+Display_name(){
+
+read -p "Enter your name :" name
+
+for i in {1..3}
+do
+ echo "$name"
+done
+}
+Display_name
+#4b
+Display_name(){
+read -p "Enter your name :"
+count=1
+max_count=3
+
+while [ $count -le $max_count ]
+do
+
+echo "$name"
+((count++))
+done
+}
+Display_name
+\end{verbatim}
+\section*{Number 5}
+\begin{verbatim}
+Fibonacci_sequence() {
+
+read -p "Enter the first number :" a
+read -p "Enter the second number :" b
+echo "the fibonacci sequence until 15 :"
+
+for (( i=0; i<15 ; i++ ))
+do
+
+echo  "$a "
+c=$((a + b))
+a=$b
+b=$c
+done
+}
+Fibonacci_sequence
+\end{verbatim}
+\section*{Number 6}
+\begin{verbatim}
+Sequence_numbers(){
+read -p "Enter your first number :" x0
+read -p "Enter your second number :" x1
+
+x[0]=$x0
+x[1]=$x1
+echo "the sequence x[i+2]= 1/2x[i+1] -  3x[i] until 30 :"
+
+
+for (( i=2; i<30; i++ )) do
+
+
+x[i]=$(echo "scale=4; 0.5 * ${x[$((i-1))]} - 3 *${x[$((i-2))]}" | bc)
+echo "x[$i]=${x[i]}"
+
+done
+
+}
+
+Sequence_numbers $x0 $x1
+
+\end{verbatim}
+
+\section*{Number 7a.i}
+
+\begin{verbatim}
+sequence_numbers() {
+read -p "Enter the number of M :" M
+
+sum=0
+n=0
+for (( i = 1; ;i++ )) ; do
+sum=$(( sum+i*i ))
+if [[ $sum -ge $M ]];then
+    n=$i
+break
+fi
+done
+echo " $M has reached or exceeded by the square sum up to : $n"
+}
+sequence_numbers
+
+\end{verbatim}
+
+\section*{Number 7a.ii}
+
+\begin{verbatim}
+multiplication(){
+
+read -p "Enter a number between 1 to 9  : " n
+read -p "Enter the number where you want the multiplication to stop :  " N
+
+for i in $(seq 1 $N); do
+  echo "$n * $i" "=" "$(($n * $i))"
+done
+}
+
+multiplication
+\end{verbatim}
+\section*{Number 7b.i}
+\begin{verbatim}
+read -p "Enter a natural number M: " M
+
+
+sum=0
+
+# Using a for loop
+for (( n=1; ; n++ ))
+do
+    sum=$((sum + n * n))  # Add n^2 to the sum
+    if (( sum >= M )); then
+        echo "The smallest n such that 1^2 + 2^2 + ... + n^2 >= $M is: $n"
+        break
+    fi
+done
+\end{verbatim}
+
+\section*{Number 7b.ii.}
+\begin{verbatim}
+
+read -p "Enter a natural number M: " M
+
+n=1
+sum=0\begin{verbatim}
+
+
+while (( sum < M ))
+do
+    sum=$((sum + n * n))  # Add n^2 to the sum
+    n=$((n + 1))  # Increment n
+done
+
+n=$((n - 1))
+
+echo "The smallest n such that 1^2 + 2^2 + ... + n^2 >= $M is: $n"
+\end{verbatim}
+
+\section*{Number 8}
+
+\begin{verbatim}
+multiplication(){
+
+read -p "Enter a number between 1 to 9  : " n
+read -p "Enter the number where you want the multiplication to stop :  " N
+
+for i in $(seq 1 $N); do
+  echo "$n * $i" "=" "$(($n * $i))"
+done
+}
+multiplication
+\end{verbatim}
+\section*{Number 9}
+\begin{verbatim}
+    
+
+multiples() {
+
+for i in $(seq 0 40); do
+    #if (( i % 3 == 0 || i % 7 == 0 || i % 11 == 0 )) ;then
+      #echo "$i"
+    #fi
+done
+
+\end{verbatim}
+\section*{Number 10}
+
+\begin{verbatim}
+
+get_input() {
+    local prompt=$1
+    local min=$2
+    local max=$3
+    local num
+
+    while :; do
+        read -p "$prompt" num
+        if [[ "$num" =~ ^[0-9]+$ ]] && (( num >= min && num <= max )); then
+            break
+        else
+            echo "Please enter a valid number between $min and $max."
+        fi
+    done
+    echo $num
+}
+
+while :; do
+    
+    x=$(get_input "Enter an integer x (0-9): " 0 9)
+
+    
+    max=$(get_input "Enter an integer max (0-255): " 0 255)
+
+    
+    echo "Multiples of $x between 0 and $max are:"
+    for (( i=0; i<=max; i+=x )); do
+        if (( i > 0 )); then
+            echo "$i"
+        fi
+    done
+
+    read -p "Do you want to continue? (y/n): " answer
+    if [[ "$answer" != "y" ]]; then
+        echo "Goodbye!"
+        break
+    fi
+done
+\end{verbatim}
+\end{document}
