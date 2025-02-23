@@ -1,0 +1,512 @@
+---
+title: "Malaria Modelling"
+author: "Brian Ayanda Manamike"
+date: "2025-02-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+---
+title: "Assignment 1 MDS"
+author: "Group1"
+date: "2025-02-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+library(epiR)
+library(broom)
+library(foreign)
+library(gtsummary)
+library(sf)
+library(scales)
+library(ggplot2)
+library(dplyr)
+library(haven)
+library(dplyr)
+library(tidyr)
+library(survey)
+library(jtools)
+library(remotes)
+library(finalfit)
+library(kableExtra)
+library(ggpubr)
+```
+
+```{r}
+# Setting our working directory
+#setwd("/home/handsom/Group_project_malaria_data_science/Practice-AIMS (1)")
+# Load our dataset
+#children <- read.csv("dhs-20219-children-data.csv")
+children<- read_sav("/home/handsom/data_science/dhs2020/RWKR81SV/RWKR81FL.SAV")
+print(head(children))
+```
+
+```{r}
+#ZZHR62FL <- read_sav("~/Group_project_malaria_data_science/Class DATA/HH/ZZHR62FL.SAV")
+setwd("/home/handsom/Group_project_malaria_data_science/dhs2020/RWHR81SV")
+ZZHR62FL<- read_sav("/home/handsom/Group_project_malaria_data_science/dhs2020/RWHR81SV/RWHR81FL.SAV")
+head(ZZHR62FL)
+```
+## Here we areb going to group the Child's age variable into three level, **Infants under 2 years**, **Toddlers between 2-3 years** and **Preschoolers between 3-5 years**
+```{r}
+children <- children %>% 
+  mutate(Child_Age=case_when(
+    HW1 == 0 | HW1 == 23 ~ "Infants under 2 years",
+    HW1 == 24 | HW1 == 35 ~ "Toddlers between 2-3 years",
+    HW1 == 36 | HW1 == 59 ~ "Preschoolers between 3-5 years",
+    TRUE ~ NA_character_  # Handle unexpected values, assign NA
+  ),
+  Childs_Age = case_when(
+    Child_Age %in% c("Infants under 2 years", "Toddlers between 2-3 years") ~ "Infants and Toddlers under 3 years",
+    Child_Age %in% c("Toddlers between 2-3 years", "Preschoolers between 3-5 years") ~ "Toddlers and Preschoolers under 5 years",
+    Child_Age == "Infants under 2 years" ~ "Infants under 2 years",
+    TRUE ~ "Preschoolers between 3-5 years"
+  ))
+
+```
+
+```{r}
+table(children$Childs_Age)
+```
+
+```{r}
+# Create a variable Sex_of_child
+children <- children %>%
+  mutate(Sex_of_child = case_when(
+    B4 == 1 ~ "Male",
+    B4 == 2 ~ "Female",
+    TRUE ~ NA_character_  # Handle unexpected values, assign NA
+  ))
+table(children$Sex_of_child)
+```
+
+```{r}
+# Create a new variable based on the wealth index
+children$Wealth_Index <- ifelse(children$V190 %in% c(1, 2), # Poorer or Poorest
+                                "poor",
+                                ifelse(children$V190 == 3,  # Middle
+                                       "Middle",
+                                       "Rich"))  # Richer or Richest
+
+# View the updated dataframe
+table(children$Wealth_Index)
+```
+
+```{r}
+# Create a new variable based on the wealth index
+children$Educational_level <- ifelse(children$V106==0, # No education
+                                "No education",
+                                ifelse(children$V106 == 1,  # Primary
+                                       "Primary",
+                                ifelse(children$V106 == 2,
+                                       "Secondary",    # Secondary
+                                       "Higher"        #  Higher
+                                       )))  
+
+# View the updated dataframe
+table(children$Educational_level)
+```
+
+ ## This code is creating the target variable `Anti_malaria_taken` by groupng all the ant-amalria drugs taken by individuals.
+```{r}
+children <- children %>%
+  rowwise() %>%
+  mutate(
+    Anti_malaria_taken = case_when(
+      sum(!is.na(c(H37A, H37B, H37C, H37D, H37DA, H37E, H37AA, H37AB, H37F, H37G, H37H))) > 0 &
+        sum(c(H37A, H37B, H37C, H37D, H37DA, H37E, H37AA, H37AB, H37F, H37G, H37H), na.rm = TRUE) > 0 ~ 1,
+      sum(!is.na(c(H37A, H37B, H37C, H37D, H37DA, H37E, H37AA, H37AB, H37F, H37G, H37H))) == 0 ~ NA,
+      TRUE ~ 0
+    )
+  ) %>%
+  ungroup()
+
+# Display the updated data frame
+print(children)
+```
+
+```{r}
+children <- children %>%
+  mutate(Anti_Malaria_Taken = case_when(Anti_malaria_taken == 1~ "Yes", 
+                                        Anti_malaria_taken == 0~ "No",
+                                        TRUE~NA_character_  # Handle unexpected values, assign NA
+                                        ))
+table(children$Anti_Malaria_Taken)
+```
+
+```{r}
+# Assuming your data frame is named 'df'
+
+# Create a new variable 'Highest_educational_level'
+children$Highest_educational_level <- ifelse(
+  children$S108 == 1 | children$S108 == 2,
+  "Primary",
+  ifelse(children$S108 == 3 | children$S108 == 4,
+         "Secondary",
+         ifelse(children$S108 == 5, "Higher", NA)
+  )
+)
+
+# Display the updated data frame
+print(children)
+```
+
+```{r}
+table(children$Highest_educational_level)
+```
+
+```{r}
+new_children <- children[, c("V001", "V002" ,"Wealth_Index", "Educational_level", "V717", "V481", "V024", "V025","V130", "V394", "V137", "Sex_of_child","Anti_Malaria_Taken", "Highest_educational_level","Childs_Age")]
+```
+
+```{r}
+colnames(new_children)<- c("V001", "V002" , "Wealth_Index", "Educational_level", "Employement_status", "Health_insurance",  "Region","Type_of_place_of_residence", "Religion", "Visited_health_facility_last_12_month", "Number_of_Under_five", "Sex_of_child","Anti_Malaria_Taken","Highest_educational_level","Childs_Age")
+```
+
+```{r}
+# Assuming your data frame is named 'responses' and the relevant column is named 'occupation_group'
+
+new_children <- new_children %>%
+  mutate(Employment_Status = case_when(
+    Employement_status %in% c(1, 2, 3, 4, 5, 6, 7, 8, 9) ~ "Working",           # Categories for Working
+    Employement_status == 0 ~ "Not working",                               # Not Working
+    Employement_status == 98 ~ "Not working",                              # Don't know                              # Missing
+    TRUE ~NA_character_  # Handle unexpected values, assign NA                                             # Handle NA/Not Applicable
+  ))
+
+# Display the updated data frame
+table(new_children$Employment_Status)
+```
+
+## Drop the variable Employement_Status created earlier
+
+```{r}
+new_children <- subset(new_children, select = -c(Employement_status))
+colnames(new_children)
+```
+
+```{r}
+# Create a mapping of region numbers to region names
+new_children <- new_children %>%
+  mutate(Region_Name = case_when(
+    Region == 1 ~ "Kigali",
+    Region == 2 ~ "South",
+    Region == 3 ~ "West",
+    Region == 4 ~ "North",
+    Region == 5 ~ "East",
+    TRUE ~ NA_character_  # Handle unexpected values, assign NA
+  ))
+table(new_children$Region_Name)
+```
+
+# Droping the variable Region we first created
+
+```{r}
+new_children <- subset(new_children, select = -c(Region))
+colnames(new_children)
+```
+
+```{r}
+new_children <- new_children %>%
+  mutate(Religion_N = case_when(
+    Religion %in% c(1, 2, 3, 4, 5, 8, 96) ~ "Belong to a religion",
+    Religion == 97 ~ "No religion",
+    TRUE ~ NA_character_  # Handle unexpected values, assign NA
+  ))
+table(new_children$Religion_N)
+```
+
+```{r}
+new_children <- subset(new_children, select = -c(Religion))
+colnames(new_children)
+```
+
+```{r}
+new_children <- new_children %>%
+  mutate(Number_of_Under_five_years = case_when(
+    Number_of_Under_five== 0 ~ "No children",
+    Number_of_Under_five == 1 ~ "One",
+    Number_of_Under_five == 2 ~ "Two", 
+    Number_of_Under_five== 3 ~ "Three",
+    Number_of_Under_five== 4 ~ "Four",
+    Number_of_Under_five== 5 ~ "Five",
+    Number_of_Under_five== 6 ~ "Six",
+    TRUE ~ NA_character_  # Handle unexpected values, assign NA
+  ))
+table(new_children$Number_of_Under_five_years)
+```
+
+## Here we are dropint the column `Number_of_Under_five` to continue our anlysis with our new column Number_of_Under_five_years
+
+```{r}
+new_children <- subset(new_children, select = -c(Number_of_Under_five))
+new_children
+```
+
+## Categirize the varible `Health_insurance` by creating a new varible `Health_Insurance` which will have $2$ level, `Yes` fir people who are corrently working and `No` for people who are not working.
+
+```{r}
+new_children <- new_children %>%
+  mutate(Health_Insurance = case_when(
+    Health_insurance == 1 ~ "Yes",
+    Health_insurance == 0 ~ "No",  # Add a comma here
+    TRUE ~ NA_character_  # Handle unexpected values, assign NA
+  ))
+```
+
+## Droping the column `Health_insurance`.
+
+```{r}
+new_children <- subset(new_children, select = -c(Health_insurance))
+new_children
+```
+
+## Changing the level of the categorical variable `Visited_health_facility_last_12_month` into `Yes` and `No`.
+
+```{r}
+new_children <- new_children %>%
+  mutate(Visited_health_Facility_Last_12_Month = case_when(
+    Visited_health_facility_last_12_month == 1 ~ "Yes",
+    Visited_health_facility_last_12_month == 0 ~ "No",  # Add a comma here
+    TRUE ~ NA_character_  # Handle unexpected values, assign NA
+  ))
+```
+
+## Droping the column `Visited_health_facility_last_12_month` which was replace by `Visited_health_Facility_Last_12_Month`
+
+```{r}
+new_children <- subset(new_children, select = -c(Visited_health_facility_last_12_month))
+new_children
+```
+
+```{r}
+# Create new variable Place_of_residence
+new_children <- new_children %>%
+  mutate(Place_of_residence = ifelse(Type_of_place_of_residence == 1, "Urban", "Rural"))
+table(new_children$Place_of_residence)
+```
+
+```{r}
+new_children <- subset(new_children, select = -c(Type_of_place_of_residence))
+colnames(new_children)
+```
+
+```{r}
+SS3 <- data.frame(V1=ZZHR62FL$HV001,
+                 V2=ZZHR62FL$HV002,
+                 SB1=ZZHR62FL$`SBSEL$01`,
+                 SB2=ZZHR62FL$`SBSEL$02`,
+                 SB3=ZZHR62FL$`SBSEL$03`,
+                 SB4=ZZHR62FL$`SBSEL$04`,
+                 SB5=ZZHR62FL$`SBSEL$05`,
+                 SB6=ZZHR62FL$`SBSEL$06`,
+                 SB7=ZZHR62FL$`SBSEL$07`,
+                 SB8=ZZHR62FL$`SBSEL$08`,
+                 SB9=ZZHR62FL$`SBSEL$09`,
+                 SB10=ZZHR62FL$`SBSEL$10`,
+                 SB11=ZZHR62FL$`SBSEL$11`,
+                 SB12=ZZHR62FL$`SBSEL$12`,
+                 SB13=ZZHR62FL$`SBSEL$13`,
+                 SB14=ZZHR62FL$`SBSEL$14`,
+                 SB15=ZZHR62FL$`SBSEL$15`,
+                 SB16=ZZHR62FL$`SBSEL$16`)
+print(head(SS3))
+```
+
+```{r}
+View(SS3)
+```
+
+```{r}
+SS4 <- data.frame(V1= children$V001,
+                  V2= children$V002,
+                    B16= children$B16)
+
+```
+
+
+## Setting the merging in other to count chilgren that vae malaria
+```{r}
+SS3$maching <- paste(SS3$V1, SS3$V2, sep = "_")
+SS4$maching <- paste(SS4$V1, SS4$V2, sep = "_")
+merge2 <- merge(SS3, SS4, by="maching")
+
+```
+
+```{r}
+# Convert SB columns to character in advance
+merge2 <- merge2 %>%
+  mutate(across(SB1:SB16, as.character))
+
+# Use rowwise and mutate
+merge2 <- merge2 %>%
+  rowwise() %>%
+  mutate(Result_test = if (!is.na(B16) && B16 > 0) {
+      if (any(c_across(SB1:SB16) == 2, na.rm = TRUE)) {
+        "Positive"
+      } else {
+        "Negative"
+      }
+    } else {
+      NA  # Here, NA or any other label if needed
+    }) %>%
+  ungroup()  # Ungroup after row-wise operation
+```
+
+```{r}
+table(merge2$Result_test)
+```
+
+## Final merging
+
+```{r}
+new_children$maching <- paste(new_children$V001, new_children$V002, sep = "_")
+Filnal_merge <- merge(new_children, merge2, by="maching")
+View(Filnal_merge)
+```
+
+```{r}
+Final_dataset<- Filnal_merge[, c("Anti_Malaria_Taken","Wealth_Index","Result_test" ,"Sex_of_child","Highest_educational_level","Employment_Status","Region_Name" ,"Religion_N"                 ,"Number_of_Under_five_years" ,"Health_Insurance"                     
+ ,"Visited_health_Facility_Last_12_Month" ,"Place_of_residence","Childs_Age")]
+
+```
+
+```{r}
+
+```
+
+```{r}
+## Removing people that have a negative test
+Final_dataset_cleaned <- Final_dataset[Final_dataset$Result_test != "Negative", ]
+
+```
+
+```{r}
+Final_dataset_cleaned <- Final_dataset_cleaned[!is.na(Final_dataset_cleaned$Anti_Malaria_Taken), ]
+
+```
+
+```{r}
+colnames(Final_dataset_cleaned)
+```
+
+## Descriptive analysis Socio-Economic factors
+
+```{r}
+v_indep <- c("Wealth_Index","Highest_educational_level", "Health_Insurance", "Employment_Status","Childs_Age"  , "Number_of_Under_five_years","Sex_of_child","Visited_health_Facility_Last_12_Month")
+v_dep <- "Anti_Malaria_Taken"  
+Final_dataset_cleaned |> summary_factorlist(v_dep, v_indep, p=TRUE, p_cont_para = "t.test", p_cat = "chisq", add_dependent_label = FALSE, cont = "mean", total_col = FALSE, add_col_totals = TRUE, add_row_totals = TRUE, na_include = TRUE, na_to_p = FALSE, na_to_prop = FALSE, include_col_totals_percent = FALSE) -> Final_dataset_summary
+
+#xlsx:: write.xlsx(Merge_file_summary, "Merge_file_summary.xlsx", sheetName="1.2b", append=FALSE, row.names=FALSE)
+
+Final_dataset_summary |>
+  kable(caption = "") |>
+  kable_styling() |>
+  kable_classic(lightable_options = c("striped", "hover"))
+```
+
+```{r}
+Final_dataset_summary <- Final_dataset_cleaned %>%
+  tbl_summary(
+    by = "Anti_Malaria_Taken", 
+    statistic = all_categorical() ~ "{n} ({p}%)"
+  )
+Final_dataset_summary
+```
+
+## Multivariate analysis for socio-economic factor
+
+```{r}
+Final_dataset_cleaned$Anti_Malaria_Taken_binary <- as.integer(Final_dataset_cleaned$Anti_Malaria_Taken =="Yes")
+# If missing values are present, you might decide to remove them
+# However, removing rows with missing values can lead to biased results
+# Here's how you could do it, but consider imputation or other strategies
+#Final_dataset_complete <- na.omit(Final_dataset)
+
+modelEC1 <- glm (Anti_Malaria_Taken_binary~ Wealth_Index + Highest_educational_level  + Number_of_Under_five_years + Employment_Status + Childs_Age + Visited_health_Facility_Last_12_Month + Sex_of_child, family=binomial(), data=Final_dataset_cleaned)
+
+summary(modelEC1)
+
+```
+
+```{r}
+modelEC1 |> 
+  tbl_regression(exponentiate = TRUE,
+                 label=list(Wealth_Index~ "Wealth Index",
+                            Highest_educational_level ~ "Highest Educational level", 
+                           Employment_Status ~ "Currently Insurence",
+                           Childs_Age ~ "Age of Children",
+                          Visited_health_Facility_Last_12_Month ~ "Visited Health Facility Last 12 Month",
+                          Sex_of_child~ "Sex of child"))  |> 
+  bold_labels() |> 
+  bold_p()
+```
+
+## Demographic and Geographic factors
+
+```{r}
+v_indep <- c("Region_Name","Religion_N", "Childs_Age", "Place_of_residence" ,"Sex_of_child" )
+v_dep <- "Anti_Malaria_Taken" 
+Final_dataset |> summary_factorlist(v_dep, v_indep, p=TRUE, p_cat = "chisq", add_dependent_label = FALSE, cont = "mean", total_col = FALSE, add_col_totals = TRUE, add_row_totals = TRUE, na_include = TRUE, na_to_p = FALSE, na_to_prop = FALSE, include_col_totals_percent = FALSE) -> Merge_file_summary
+
+#xlsx:: write.xlsx(Merge_file_summary, "Merge_file_summary.xlsx", sheetName="1.2b", append=FALSE, row.names=FALSE)
+
+Merge_file_summary |>
+  kable(caption = "") |>
+  kable_styling() |>
+  kable_classic(lightable_options = c("striped", "hover"))
+```
+
+## Mutivariate analysis of the Geographic and Demographic factors
+
+```{r}
+modelEC2 <- glm (Anti_Malaria_Taken_binary~ Region_Name + Childs_Age   + Number_of_Under_five_years + Place_of_residence + Sex_of_child + Religion_N, family=binomial(), data=Final_dataset_cleaned)
+
+summary(modelEC2)
+
+```
+## When we perfom the `glm` on the Demographic and Geographic factors, we can see that the p-value of the `South` and the `West` region is less than $0.05$ meaning that these two region influence a lot on the disparities of anti-malaria drugs in Rwanda but we were expecting also to see some varibles like `Number of children in the household` because if if a household has too many children, if there don't have anough money it will be more likly that children will not have acces on the anti-malaria drug espacially here in Africa where there is malaria in almost all the countrie and sometime, all the children in the household can be infected.
+
+
+```{r}
+modelEC2 |> 
+  tbl_regression(exponentiate = TRUE,
+                 label=list(Region_Name~ "Region names",
+                             Number_of_Under_five_years ~ "Number of child under five years in the household", 
+                           Childs_Age ~ "Age of Children",
+                          Religion_N ~ "Religion",
+                          Sex_of_child~ "Sex of child"))  |> 
+  bold_labels() |> 
+  bold_p()
+```
+
+
+
+```{r}
+Final_dataset_cleaned |>  group_by(Region_Name, Anti_Malaria_Taken) |> 
+  summarize(n=n()) |> 
+  mutate(p=n/sum(n),
+pct=scales:: percent(p, accuracy = 0.1)) -> e1_2d
+
+ggplot(e1_2d, aes(x=Region_Name, y=p, fill = Anti_Malaria_Taken))+
+  geom_bar(stat= "identity", position = "fill")+
+  scale_y_continuous(breaks = seq(0,1,.2), labels = percent)+
+  geom_text(aes(label = pct), size = 3, position = position_stack(vjust = 0.5))+
+  scale_fill_brewer(palette = "Set2")+
+  labs(y="Percent", fill="Anti-malaria Drug", x="Region")+
+  theme_pubr()
+```
+
+
+
+
